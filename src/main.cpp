@@ -1,16 +1,13 @@
 #include <Arduino.h>
 #include <IRremote.h>
-#include <EEPROM.h>
 
 const int ledPin = 13;
 const int recvPin = 11;
 const int XBianBootPin = 12;
 const int bootPulseDuration = 10;
-const int eepromAddress = 0;
-const int waitingTime = 5000;
 IRrecv irrecv(recvPin);
 decode_results results;
-unsigned long keyCodeFromEEPROM = 0;
+unsigned long keyCode1 = 0x3C, keyCode2 = 0x1003C;
 
 void bootXbBian() {
   pinMode(XBianBootPin, OUTPUT);
@@ -24,31 +21,10 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Hello, world!");
   irrecv.enableIRIn();
-  Serial.print("Waiting for key code change during ");
-  Serial.print(waitingTime);
-  Serial.println("ms...");
-  while(millis() < waitingTime) {
-    if(irrecv.decode(&results)) {
-      if(results.value != 0xFFFFFFFF) {
-        EEPROM.put(eepromAddress, results.value);
-        Serial.print("Storing key code ");
-        Serial.print(results.value, HEX);
-        Serial.print(" in EEPROM at address ");
-        Serial.println(eepromAddress);
-        irrecv.resume();
-        break;
-      }
-      irrecv.resume();
-    }
-    digitalWrite(ledPin, HIGH);
-    delay(100);
-    digitalWrite(ledPin, LOW);
-    delay(100);
-  }
-  Serial.println("Stop waiting");
-  EEPROM.get(eepromAddress, keyCodeFromEEPROM);
-  Serial.print("Using key code ");
-  Serial.println(keyCodeFromEEPROM, HEX);
+  Serial.print("Using key codes ");
+  Serial.print(keyCode1, HEX);
+  Serial.print(", ");
+  Serial.println(keyCode2, HEX);
   Serial.println("Running main loop...");
   digitalWrite(ledPin, LOW);
 }
@@ -56,12 +32,16 @@ void setup() {
 void loop() {
 
   if(irrecv.decode(&results)) {
-    if(results.value == keyCodeFromEEPROM) {
+    if(results.value == keyCode1 || results.value == keyCode2) {
       bootXbBian();
       Serial.println("Booting XBian...");
       digitalWrite(ledPin, HIGH);
       delay(1000);
       digitalWrite(ledPin, LOW);
+    }
+    else {
+      Serial.print("Received key code ");
+      Serial.println(results.value, HEX);
     }
     irrecv.resume();
   }
